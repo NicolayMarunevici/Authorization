@@ -11,5 +11,17 @@ public interface UserService {
 
   User getById(long id);
 
+  User update(User user, long id);
+
   User create(User user);
+
+  User getByEmail(String email);
+
+  User getByUsernameOrEmail(String username, String email);
+
+  User getByUsername(String username);
+
+  Boolean existsUserByUsername(String username);
+
+  Boolean existsUserByEmail(String email);
 }

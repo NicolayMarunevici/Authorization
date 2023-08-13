@@ -8,7 +8,6 @@ import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import io.jsonwebtoken.security.SignatureException;
 import java.security.Key;
 import java.util.Date;
 import org.springframework.beans.factory.annotation.Value;
@@ -24,7 +23,7 @@ public class JwtTokenProvider {
   private long jwtExpirationDate;
 
   //generate JWT token
-  public String generateToken(Authentication authentication){
+  public String generateToken(Authentication authentication) {
     String username = authentication.getName();
 
     Date currentDate = new Date();
@@ -38,14 +37,26 @@ public class JwtTokenProvider {
         .compact();
   }
 
-  private Key key(){ // decode secret key from aplication-properties
+  public String generateToken(String username) {
+    Date currentDate = new Date();
+    Date expirationDate = new Date(currentDate.getTime() + jwtExpirationDate);
+
+    return Jwts.builder()
+        .setSubject(username)
+        .setIssuedAt(new Date())
+        .setExpiration(expirationDate)
+        .signWith(key())
+        .compact();
+  }
+
+  private Key key() { // decode secret key from aplication-properties
     return Keys.hmacShaKeyFor(
         Decoders.BASE64.decode(jwtSecret)
     );
   }
 
   // get username from JWT token
-  public String getUsername(String token){
+  public String getUsername(String token) {
     Claims claims = Jwts.parserBuilder() // parse JWT token on different parts
         .setSigningKey(key()) // secret key
         .build()
@@ -54,7 +65,7 @@ public class JwtTokenProvider {
     return claims.getSubject(); // get username
   }
 
-  public boolean validateToken(String token){
+  public boolean validateToken(String token) {
     try {
       Jwts.parserBuilder()
           .setSigningKey(key())

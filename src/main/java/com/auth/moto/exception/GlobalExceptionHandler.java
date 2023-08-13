@@ -22,9 +22,25 @@ public class GlobalExceptionHandler {
 
   @ExceptionHandler(AccessDeniedException.class)
   public ResponseEntity<ErrorDetails> handleAccessDeniedException(AccessDeniedException exception,
-                                                                  WebRequest webRequest){
+                                                                  WebRequest webRequest) {
     ErrorDetails errorDetails = new ErrorDetails(new Date(), exception.getMessage(),
         webRequest.getDescription(false));
     return new ResponseEntity<>(errorDetails, HttpStatus.UNAUTHORIZED);
+  }
+
+  @ExceptionHandler(NoSuchUserException.class)
+  public ResponseEntity<ErrorDetails> handleNoSuchUserException(NoSuchUserException exception,
+                                                                WebRequest webRequest) {
+    ErrorDetails errorDetails =
+        new ErrorDetails(new Date(), exception.getMessage(), webRequest.getDescription(false));
+    return new ResponseEntity<>(errorDetails, HttpStatus.NOT_FOUND);
+  }
+
+  @ExceptionHandler(InvalidTokenException.class)
+  public ResponseEntity<ErrorDetails> handleInvalidTokenException(InvalidTokenException exception,
+                                                                  WebRequest webRequest) {
+    ErrorDetails errorDetails =
+        new ErrorDetails(new Date(), exception.getMessage(), webRequest.getDescription(false));
+    return new ResponseEntity<>(errorDetails, HttpStatus.BAD_REQUEST);
   }
 }

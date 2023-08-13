@@ -2,7 +2,7 @@ package com.auth.moto.exception;
 
 import org.springframework.http.HttpStatus;
 
-public class MotoSharingException extends RuntimeException{
+public class MotoSharingException extends RuntimeException {
 
   private HttpStatus status;
 
