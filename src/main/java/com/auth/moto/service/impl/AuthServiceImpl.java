@@ -6,10 +6,14 @@ import com.auth.moto.entity.dto.LoginDto;
 import com.auth.moto.entity.dto.RegisterDto;
 import com.auth.moto.exception.InvalidTokenException;
 import com.auth.moto.exception.MotoSharingException;
+import com.auth.moto.exception.NoSuchUserException;
 import com.auth.moto.repository.RoleRepository;
 import com.auth.moto.security.JwtTokenProvider;
 import com.auth.moto.service.AuthService;
 import com.auth.moto.service.UserService;
+import jakarta.validation.Valid;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -32,10 +36,10 @@ public class AuthServiceImpl implements AuthService {
   private final RoleRepository roleRepository;
   private final PasswordEncoder passwordEncoder;
   private final JwtTokenProvider jwtTokenProvider;
-
+  private Random rand = SecureRandom.getInstanceStrong();
   public AuthServiceImpl(AuthenticationManager authenticationManager, UserService userService,
                          RoleRepository roleRepository, PasswordEncoder passwordEncoder,
-                         JwtTokenProvider jwtTokenProvider) {
+                         JwtTokenProvider jwtTokenProvider) throws NoSuchAlgorithmException {
     this.authenticationManager = authenticationManager;
     this.userService = userService;
     this.roleRepository = roleRepository;
@@ -53,16 +57,8 @@ public class AuthServiceImpl implements AuthService {
 
     SecurityContextHolder.getContext().setAuthentication(authentication);
 
-    Random rand = new Random();
-
     String accessToken = jwtTokenProvider.generateToken(authentication);
-    String refreshToken = rand.ints(48, 123)
-        .filter(num -> (num < 58 || num > 64) && (num < 91 || num > 96))
-        .limit(15)
-        .mapToObj(c -> (char) c)
-        .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)
-        .toString().concat("_" + accessToken.substring(accessToken.length() - 6));
-
+    String refreshToken = generateRefreshTokenByRandomString(accessToken);
     Map<String, String> map = new HashMap<>();
     map.put("Refresh-Token", refreshToken);
     map.put("Access-Token", accessToken);
@@ -76,14 +72,14 @@ public class AuthServiceImpl implements AuthService {
   }
 
   @Override
-  public String register(RegisterDto registerDto) {
+  public String register(@Valid RegisterDto registerDto) {
     log.info("Attempt to register user");
     if (userService.existsUserByUsername(registerDto.username())) {
-      throw new MotoSharingException(
-          "User with such username already exists", HttpStatus.BAD_REQUEST);
+      throw new NoSuchUserException(
+          "User with such username already exists");
     } else if (userService.existsUserByEmail(registerDto.email())) {
-      throw new MotoSharingException(
-          "User with such email already exists", HttpStatus.BAD_REQUEST);
+      throw new NoSuchUserException(
+          "User with such email already exists");
     } else {
       Set<Role> roles = new HashSet<>();
       String userRole = "ROLE_USER";
@@ -91,9 +87,12 @@ public class AuthServiceImpl implements AuthService {
           () -> new MotoSharingException(
               String.format("Role %s does not exist in database", userRole),
               HttpStatus.BAD_REQUEST)));
+
+      Map<String, String> pairOfTokens = generateRefreshAndAccessToken(registerDto.username());
+
       User newUser =
           new User(registerDto.username(), passwordEncoder.encode(registerDto.password()),
-              registerDto.email(), roles);
+              registerDto.email(), roles, pairOfTokens.get("Refresh-Token"));
       userService.create(newUser);
       log.info("User has been registered");
 
@@ -102,23 +101,14 @@ public class AuthServiceImpl implements AuthService {
   }
 
 
-  public Map<String, String> generateRefreshAndAccessToken(String refreshToken,
-                                                           String accessToken) {
+  public Map<String, String> generateRefreshAndAccessTokenByExpireTime(String refreshToken,
+                                                                        String accessToken) {
     log.info("Attempt to generate refresh and access token");
     if (validateRefreshAndAccessToken(refreshToken, accessToken)) {
       String newAccessToken =
           jwtTokenProvider.generateToken(jwtTokenProvider.getUsername(accessToken));
-      Random rand = new Random();
 
-      String randomString = rand.ints(48, 123)
-          .filter(num -> (num < 58 || num > 64) && (num < 91 || num > 96))
-          .limit(15)
-          .collect(StringBuffer::new, StringBuffer::appendCodePoint, StringBuffer::append)
-          .toString();
-
-      String newRefreshToken =
-          randomString.concat("_").concat(newAccessToken.substring(newAccessToken.length() - 6));
-
+      String newRefreshToken = generateRefreshTokenByRandomString(newAccessToken);
       Map<String, String> map = new HashMap<>();
       map.put("RefreshToken", newRefreshToken);
       map.put("AccessToken", newAccessToken);
@@ -126,11 +116,29 @@ public class AuthServiceImpl implements AuthService {
       User user = userService.getByEmail(jwtTokenProvider.getUsername(accessToken));
       user.setRefreshToken(newRefreshToken);
       userService.update(user, user.getId());
-
       return map;
     } else {
       throw new InvalidTokenException("This token is invalid");
     }
+  }
+
+  public Map<String, String> generateRefreshAndAccessToken(String username) {
+    String accessToken = jwtTokenProvider.generateToken(username);
+    String refreshToken = generateRefreshTokenByRandomString(accessToken);
+    Map<String, String> map = new HashMap<>();
+    map.put("Refresh-Token", refreshToken);
+    map.put("Access-Token", accessToken);
+    return map;
+  }
+
+
+  private String generateRefreshTokenByRandomString(String accessToken) {
+    return rand.ints(48, 123)
+        .filter(num -> (num < 58 || num > 64) && (num < 91 || num > 96))
+        .limit(15)
+        .mapToObj(c -> (char) c)
+        .collect(StringBuffer::new, StringBuffer::append, StringBuffer::append)
+        .toString().concat("_" + accessToken.substring(accessToken.length() - 6));
   }
 
   private boolean validateRefreshAndAccessToken(String refreshToken, String accessToken) {

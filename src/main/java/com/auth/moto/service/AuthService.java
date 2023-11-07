@@ -9,5 +9,5 @@ public interface AuthService {
 
   String register(RegisterDto registerDto);
 
-  Map<String, String> generateRefreshAndAccessToken(String refreshToken, String accessToken);
+  Map<String, String> generateRefreshAndAccessTokenByExpireTime(String refreshToken, String accessToken);
 }

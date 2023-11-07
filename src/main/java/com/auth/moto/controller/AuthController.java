@@ -5,6 +5,9 @@ import com.auth.moto.entity.dto.LoginDto;
 import com.auth.moto.entity.dto.RegisterDto;
 import com.auth.moto.service.AuthService;
 import java.util.Map;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("api/auth")
 public class AuthController {
 
-  private AuthService authService;
+  private final AuthService authService;
 
   public AuthController(AuthService authService) {
     this.authService = authService;
@@ -43,11 +46,11 @@ public class AuthController {
   }
 
 
-  @PostMapping("tokens")
+  @PostMapping("refresh")
   public ResponseEntity<Map<String, String>> generatePairOfTokens(
       @RequestHeader("Refresh-Token") String refreshToken,
       @RequestHeader("Access-Token") String accessToken) {
-    Map<String, String> map = authService.generateRefreshAndAccessToken(refreshToken, accessToken);
+    Map<String, String> map = authService.generateRefreshAndAccessTokenByExpireTime(refreshToken, accessToken);
     return ResponseEntity.ok(map);
   }
 }

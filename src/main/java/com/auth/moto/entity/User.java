@@ -12,6 +12,7 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import java.util.Set;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -20,11 +21,14 @@ import lombok.Setter;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
+@Builder
 @Entity
 public class User {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
+
+  
   @Column(unique = true)
   private String username;
   private String password;
@@ -38,10 +42,11 @@ public class User {
       inverseJoinColumns = @JoinColumn(name = "role_id", referencedColumnName = "id"))
   private Set<Role> roles;
 
-  public User(String username, String password, String email, Set<Role> roles) {
+  public User(String username, String password, String email, Set<Role> roles, String refreshToken) {
     this.username = username;
     this.password = password;
     this.email = email;
     this.roles = roles;
+    this.refreshToken = refreshToken;
   }
 }

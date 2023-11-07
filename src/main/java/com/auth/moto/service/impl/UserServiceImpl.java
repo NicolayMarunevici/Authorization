@@ -1,21 +1,22 @@
 package com.auth.moto.service.impl;
 
 import com.auth.moto.entity.User;
-import com.auth.moto.exception.MotoSharingException;
 import com.auth.moto.exception.NoSuchUserException;
 import com.auth.moto.repository.UserRepository;
 import com.auth.moto.service.UserService;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class UserServiceImpl implements UserService {
   private final UserRepository userRepository;
+
+  public UserServiceImpl(UserRepository userRepository) {
+    this.userRepository = userRepository;
+  }
 
   public List<User> getAll() {
     log.info("Get All Users");
@@ -25,8 +26,7 @@ public class UserServiceImpl implements UserService {
   public User getById(long id) {
     log.info("Find User By Id");
     return userRepository.findById(id)
-        .orElseThrow(() -> new MotoSharingException("User with id " + id + " does not exist",
-            HttpStatus.NOT_FOUND));
+        .orElseThrow(() -> new NoSuchUserException("User with id " + id + " does not exist"));
   }
 
   public User create(User user) {
@@ -34,7 +34,7 @@ public class UserServiceImpl implements UserService {
     return userRepository.save(user);
   }
 
-  public User update(User user, long id) {
+  public Long update(User user, Long id) {
     log.info("Update User");
     User userById = userRepository.findById(id)
         .orElseThrow(() -> new NoSuchUserException("User was not found with with username"));
@@ -46,7 +46,7 @@ public class UserServiceImpl implements UserService {
     userById.setRoles(user.getRoles());
     userRepository.save(userById);
 
-    return userById;
+    return userById.getId();
   }
 
 
